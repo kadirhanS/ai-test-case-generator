@@ -72,18 +72,14 @@ npm run dev
 
 ---
 
-## 🧠 How It's Made — AI + Human Collaboration
+## 🧠 How It's Made
 
-This project was built by:
+Built by a QA engineer who believes AI should make testing faster, not replace testers. 
 
-- **Kadirhan** — product vision, QA expertise, feature design, testing
-- **Opencode AI agent (assisted by multiple AI models)** — implementation, architecture, UI components
-
-The entire codebase was developed through **collaborative AI-assisted pair programming**. Every decision was reviewed and approved by a human. The AI handled boilerplate, generated components, and suggested architecture — the human made all final decisions. This README itself was co-written by human and AI.
-
-**Why this matters:** It demonstrates that AI isn't replacing QA engineers — it's giving them superpowers. With this tool, a QA engineer can generate comprehensive test coverage in seconds instead of hours.
+The entire project uses **free AI models** (via OpenRouter) and **open-source technologies**. No paid subscriptions, no locked-in services — just a developer, a browser, and an AI coding assistant.
 
 ---
+
 
 ## 🏗️ Tech Stack
 
@@ -173,4 +169,4 @@ MIT — use it, fork it, share it, learn from it. ✌️
 
 ---
 
-*Created by Kadirhan · Powered by OpenRouter · Built with AI collaboration*
+*Built with ☕ and open-source tools · Powered by OpenRouter*
