@@ -2,58 +2,70 @@
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
-import CodeInput from "@/components/CodeInput";
+import TestCaseForm from "@/components/TestCaseForm";
+
+interface ApiError {
+  message?: string;
+  statusCode?: number;
+  isRateLimit?: boolean;
+  retryAfterSeconds?: number;
+  provider_name?: string;
+}
 
 export default function Home() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const handleGenerate = async (code: string, framework: string) => {
+  const handleGenerate = async (
+    featureName: string,
+    description: string,
+    apiKey: string,
+    model: string
+  ) => {
     setIsLoading(true);
+    setError(null);
     try {
       const response = await fetch("/api/generate", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ code, framework }),
+        body: JSON.stringify({ featureName, description, apiKey, model }),
       });
 
+      const data = await response.json();
+
       if (!response.ok) {
-        const error = await response.json();
-        throw new Error(error.error ?? "Failed to generate test cases");
+        // Structured error from our backend
+        const apiErr = data as ApiError;
+
+        if (apiErr.isRateLimit) {
+          const retryMsg =
+            apiErr.retryAfterSeconds
+              ? ` ${apiErr.retryAfterSeconds} saniye sonra tekrar deneyin.`
+              : "";
+          setError(
+            `⚠️ \u201C${apiErr.provider_name ?? "bilinmeyen sağlayıcı"}\u201D üzerinde bu model yoğunluktan reddedildi.${retryMsg} Lütfen model seçimini değiştirip tekrar deneyin (ör. Gemini 2.0 Flash daha stabildir).`
+          );
+        } else if (apiErr.statusCode === 401 || apiErr.statusCode === 403) {
+          setError("🔑 API Key geçersiz. Lütfen key'inizi kontrol edin.");
+        } else if (apiErr.statusCode === 402) {
+          setError(
+            "💳 Hesabınızda yeterli bakiye yok. Free bir model seçin veya OpenRouter hesabınıza bakiye ekleyin."
+          );
+        } else {
+          setError(apiErr.message ?? "Bilinmeyen bir hata oluştu.");
+        }
+        return;
       }
 
-      const reader = response.body?.getReader();
-      if (!reader) throw new Error("No response stream available");
-
-      const chunks: string[] = [];
-      while (true) {
-        const { done, value } = await reader.read();
-        if (done) break;
-
-        const text = new TextDecoder().decode(value, { stream: true });
-        chunks.push(text);
-      }
-
-      const fullResponse = chunks.join("");
-      // Extract JSON from the streamed response (handles text/event-stream format)
-      const jsonMatch = fullResponse.match(/\[[\s\S]*\]/);
-      let testCases;
-
-      if (jsonMatch) {
-        testCases = JSON.parse(jsonMatch[0]);
-      } else {
-        // Try direct parse
-        testCases = JSON.parse(fullResponse);
-      }
-
-      // Store in sessionStorage and navigate
-      sessionStorage.setItem("testCases", JSON.stringify(testCases));
-      sessionStorage.setItem("sourceCode", code);
+      sessionStorage.setItem("testResults", JSON.stringify(data));
       router.push("/results");
     } catch (err) {
-      console.error("Generation failed:", err);
-      alert(
-        err instanceof Error ? err.message : "Failed to generate test cases"
+      // Network error / JSON parse error etc.
+      setError(
+        err instanceof Error
+          ? err.message
+          : "Bağlantı hatası. Lütfen tekrar deneyin."
       );
     } finally {
       setIsLoading(false);
@@ -62,38 +74,71 @@ export default function Home() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-8">
-      <div className="mb-8">
-        <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
+      <div className="mb-10 text-center">
+        <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
           AI Test Case Generator
         </h1>
-        <p className="mt-2 text-sm text-zinc-600 dark:text-zinc-400">
-          Paste your source code and get comprehensive AI-generated test cases
-          in seconds.
+        <p className="mt-3 text-sm text-zinc-600 dark:text-zinc-400">
+          Describe a feature and get comprehensive test cases with Gherkin
+          scenarios — powered by AI
         </p>
       </div>
 
-      <div className="flex-1">
-        <CodeInput onGenerate={handleGenerate} isLoading={isLoading} />
+      <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
+        <TestCaseForm onGenerate={handleGenerate} isLoading={isLoading} />
       </div>
 
-      <div className="mt-8 rounded-lg border border-dashed border-zinc-300 bg-zinc-50 p-4 dark:border-zinc-700 dark:bg-zinc-900/50">
-        <h2 className="text-xs font-semibold uppercase tracking-wider text-zinc-500 dark:text-zinc-400">
-          How it works
-        </h2>
-        <ol className="mt-2 space-y-1 text-sm text-zinc-600 dark:text-zinc-400">
-          <li className="flex items-start gap-2">
-            <span className="font-mono text-xs text-zinc-400">1.</span>
-            Paste your JavaScript/TypeScript code
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="font-mono text-xs text-zinc-400">2.</span>
-            Select your testing framework
-          </li>
-          <li className="flex items-start gap-2">
-            <span className="font-mono text-xs text-zinc-400">3.</span>
-            Click &quot;Generate Tests&quot; and get AI-powered test cases
-          </li>
-        </ol>
+      {/* ── Error Display ── */}
+      {error && (
+        <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-900/20">
+          <div className="flex items-start gap-3">
+            <span className="mt-0.5 text-sm">❌</span>
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-800 dark:text-red-200">
+                {error}
+              </p>
+              <p className="mt-1 text-xs text-red-600 dark:text-red-400">
+                Model değiştirip tekrar deneyebilir veya sayfayı yenileyip
+                farklı bir model seçebilirsiniz.
+              </p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="text-sm text-red-500 hover:text-red-700 dark:text-red-400 dark:hover:text-red-200"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
+      <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
+        <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            🔍 Positive Cases
+          </h3>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            Happy path scenarios that verify features work correctly under
+            normal conditions
+          </p>
+        </div>
+        <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            🛡️ Negative Cases
+          </h3>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            Invalid inputs, error states, unauthorized access, and failure modes
+          </p>
+        </div>
+        <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
+          <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+            ⚡ Edge Cases
+          </h3>
+          <p className="mt-1 text-xs text-zinc-500 dark:text-zinc-400">
+            Boundary values, empty states, concurrency issues, and extreme
+            inputs
+          </p>
+        </div>
       </div>
     </div>
   );

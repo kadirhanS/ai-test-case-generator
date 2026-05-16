@@ -1,6 +1,5 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
-import Header from "@/components/Header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -16,7 +15,7 @@ const geistMono = Geist_Mono({
 export const metadata: Metadata = {
   title: "AI Test Case Generator",
   description:
-    "Generate comprehensive test cases for your code using AI. Supports Jest, Vitest, and React Testing Library.",
+    "Generate comprehensive test cases with Gherkin scenarios for any feature using AI.",
 };
 
 export default function RootLayout({
@@ -29,9 +28,10 @@ export default function RootLayout({
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">
-        <Header />
-        <main className="flex flex-1 flex-col">{children}</main>
+      <body className="min-h-full bg-white dark:bg-zinc-950">
+        <main className="mx-auto flex min-h-screen max-w-6xl flex-col px-4 py-4">
+          {children}
+        </main>
       </body>
     </html>
   );

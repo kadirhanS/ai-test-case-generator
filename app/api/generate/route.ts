@@ -1,44 +1,74 @@
-import { streamText } from "ai";
-import { model, SYSTEM_PROMPT } from "@/lib/ai";
+import { generateTestCases } from "@/lib/openrouter";
+import type { GenerateRequest } from "@/lib/types";
 
 export const maxDuration = 30;
 
 export async function POST(request: Request) {
   try {
-    const { code, framework = "jest" } = await request.json();
+    const body = (await request.json()) as Partial<GenerateRequest>;
 
-    if (!code || typeof code !== "string" || code.trim().length === 0) {
+    if (
+      !body.featureName ||
+      typeof body.featureName !== "string" ||
+      body.featureName.trim().length === 0
+    ) {
       return Response.json(
-        { error: "Code snippet is required" },
+        { error: "featureName is required" },
         { status: 400 }
       );
     }
 
-    const userPrompt = `Generate test cases for the following code using ${framework}:
+    if (
+      !body.description ||
+      typeof body.description !== "string" ||
+      body.description.trim().length === 0
+    ) {
+      return Response.json(
+        { error: "description is required" },
+        { status: 400 }
+      );
+    }
 
-\`\`\`
-${code}
-\`\`\`
+    if (
+      !body.apiKey ||
+      typeof body.apiKey !== "string" ||
+      body.apiKey.trim().length === 0
+    ) {
+      return Response.json(
+        { error: "apiKey is required" },
+        { status: 400 }
+      );
+    }
 
-Return a JSON array of test case objects.`;
+    if (
+      !body.model ||
+      typeof body.model !== "string" ||
+      body.model.trim().length === 0
+    ) {
+      return Response.json({ error: "model is required" }, { status: 400 });
+    }
 
-    const result = streamText({
-      model,
-      system: SYSTEM_PROMPT,
-      messages: [
-        {
-          role: "user",
-          content: userPrompt,
-        },
-      ],
+    const result = await generateTestCases({
+      featureName: body.featureName.trim(),
+      description: body.description.trim(),
+      apiKey: body.apiKey.trim(),
+      model: body.model.trim(),
     });
 
-    return result.toDataStreamResponse();
+    return Response.json(result);
   } catch (error) {
     console.error("Generation error:", error);
-    return Response.json(
-      { error: "Failed to generate test cases" },
-      { status: 500 }
-    );
+
+    const raw = error instanceof Error ? error.message : "";
+
+    // Try to parse structured error from openrouter.ts
+    let structured;
+    try {
+      structured = JSON.parse(raw);
+    } catch {
+      structured = { message: raw, statusCode: 500 };
+    }
+
+    return Response.json(structured, { status: structured.statusCode ?? 500 });
   }
 }

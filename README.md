@@ -1,14 +1,17 @@
 # AI Test Case Generator
 
-An intelligent web application that leverages AI to automatically generate comprehensive test cases from your source code. Built with Next.js 16, React 19, and Tailwind CSS v4.
+Describe a feature and get comprehensive test cases with Gherkin scenarios — powered by AI.
+
+Built with Next.js 16, React 19, and Tailwind CSS v4. Uses OpenRouter API for model-agnostic AI access.
 
 ## Features
 
-- **Smart Code Analysis**: Paste any code snippet and get relevant test cases
-- **Multi-Framework Support**: Generates tests for Jest, Vitest, and React Testing Library
-- **Edge Case Detection**: AI identifies boundary conditions and edge cases automatically
-- **Modern UI**: Clean, responsive interface built with Tailwind CSS v4
-- **Real-time Streaming**: See test cases generated as they're created
+- **Feature-Based Input**: Describe any feature (e.g. "Login Page", "Shopping Cart")
+- **AI-Powered Test Generation**: Generates positive, negative, and edge case tests
+- **Gherkin Scenarios**: Automatically creates Given/When/Then scenarios
+- **Multi-Model Support**: Choose from free or paid models via OpenRouter
+- **Export Options**: Copy all, export as `.feature` or `.txt`
+- **Your Own API Key**: Bring your own OpenRouter key — never stored on servers
 
 ## Getting Started
 
@@ -16,22 +19,33 @@ An intelligent web application that leverages AI to automatically generate compr
 # Install dependencies
 npm install
 
-# Set up environment variables
-cp .env.example .env.local
-# Add your OpenAI API key to .env.local
-
 # Run development server
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) to see the application.
+Open [http://localhost:3000](http://localhost:3000), enter your OpenRouter API key, select a model, and start generating test cases.
+
+## How It Works
+
+```
+User: "Login Page" + "Email/password login form..."
+         ↓
+    OpenRouter API (choose your model)
+         ↓
+    ✅ Positive Cases: correct login flows
+    ❌ Negative Cases: wrong password, empty fields
+    ⚠️ Edge Cases: SQL injection, rate limiting, concurrency
+    📋 Gherkin: Scenario / Given / When / Then
+         ↓
+    Export: Copy All / .feature / .txt
+```
 
 ## Tech Stack
 
 - **Framework**: [Next.js 16](https://nextjs.org) (App Router)
 - **UI Library**: [React 19](https://react.dev)
 - **Styling**: [Tailwind CSS v4](https://tailwindcss.com)
-- **AI SDK**: [Vercel AI SDK](https://sdk.vercel.ai)
+- **AI Provider**: [OpenRouter](https://openrouter.ai) (multi-model)
 - **Language**: TypeScript
 
 ## Project Structure
@@ -40,42 +54,31 @@ Open [http://localhost:3000](http://localhost:3000) to see the application.
 ai-test-case-generator/
 ├── app/
 │   ├── api/
-│   │   └── generate/
-│   │       └── route.ts      # AI test generation endpoint
-│   ├── results/
-│   │   └── page.tsx           # Test results display
-│   ├── globals.css            # Global styles
-│   ├── layout.tsx             # Root layout
-│   └── page.tsx               # Main page (code input)
+│   │   ├── generate/route.ts   # AI test generation endpoint
+│   │   └── models/route.ts      # Model list (free/paid)
+│   ├── results/page.tsx         # Test results display
+│   ├── layout.tsx               # Root layout
+│   └── page.tsx                 # Main page (feature input)
 ├── components/
-│   ├── CodeInput.tsx          # Code editor/input component
-│   ├── Header.tsx             # Navigation header
-│   └── TestCaseCard.tsx       # Test case display component
+│   ├── TestCaseForm.tsx         # Input form (API key, model, feature)
+│   ├── TestCaseCard.tsx         # Test case display card
+│   ├── GherkinBlock.tsx         # Gherkin scenario display
+│   └── ExportButtons.tsx        # Copy / .feature / .txt export
 ├── lib/
-│   └── ai.ts                  # AI client configuration
-├── .env.example               # Environment variables template
-├── opencode.json              # OpenCode AI configuration
+│   ├── types.ts                 # TypeScript types
+│   ├── openrouter.ts            # OpenRouter API client
+│   └── prompt-templates.ts      # AI prompt templates
+├── opencode.json                # OpenCode AI configuration (Project Manager agent)
 └── package.json
-```
-
-## Development
-
-```bash
-# Run development server
-npm run dev
-
-# Build for production
-npm run build
-
-# Lint code
-npm run lint
 ```
 
 ## Environment Variables
 
+You don't need a server-side API key. Users enter their own OpenRouter API key in the UI.
+
 | Variable | Description |
 |----------|-------------|
-| `OPENAI_API_KEY` | OpenAI API key for test generation |
+| (none required) | API key is provided by the user in the browser |
 
 ## License
 
