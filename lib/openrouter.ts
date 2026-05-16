@@ -1,3 +1,9 @@
+// ─── OpenRouter API Client ────────────────────────────────────────
+// Bu servis, OpenRouter'ın chat.completions API'sine istek gönderir.
+// Kullanıcının kendi API key'ini kullanır (sunucuda saklanmaz).
+// Hata durumlarında yapılandırılmış JSON döndürerek frontend'in
+// kullanıcı dostu hata mesajları göstermesini sağlar.
+
 import type {
   OpenRouterRequest,
   OpenRouterResponse,
@@ -8,15 +14,23 @@ import { buildPrompt } from "./prompt-templates";
 
 const OPENROUTER_API_URL = "https://openrouter.ai/api/v1/chat/completions";
 
+/**
+ * OpenRouter API'sine istek gönderir ve yapılandırılmış test case'leri döndürür.
+ * @param request - featureName, description, apiKey ve model bilgilerini içerir
+ * @returns GenerateResponse - AI tarafından üretilen test senaryoları
+ */
 export async function generateTestCases(
   request: GenerateRequest
 ): Promise<GenerateResponse> {
   const { apiKey, model, featureName, description } = request;
 
+  // API Key kontrolü — kullanıcı key girmemişse erken uyar
   if (!apiKey || apiKey.trim().length === 0) {
     throw new Error("API Key is required");
   }
 
+  // OpenRouter istek gövdesini hazırla
+  // response_format: json_object ile AI'dan her zaman JSON çıktı alırız
   const body: OpenRouterRequest = {
     model,
     messages: [
@@ -32,26 +46,31 @@ export async function generateTestCases(
     response_format: { type: "json_object" },
   };
 
+  // OpenRouter API'ye POST isteği
   const response = await fetch(OPENROUTER_API_URL, {
     method: "POST",
     headers: {
       "Content-Type": "application/json",
-      Authorization: `Bearer ${apiKey}`,
+      Authorization: `Bearer ${apiKey}`, // Kullanıcının kendi key'i
       "HTTP-Referer": "https://github.com/kadirhan/ai-test-case-generator",
       "X-Title": "AI Test Case Generator",
     },
     body: JSON.stringify(body),
   });
 
+  // ── Hata Yönetimi ──────────────────────────────────────────────
+  // OpenRouter 429 (rate limit), 401 (yetkisiz), 402 (bakiye) gibi
+  // durumlarda yapılandırılmış hata mesajı döndürürüz.
+  // Frontend bu yapıyı okuyarak kullanıcı dostu uyarılar gösterir.
+
   if (!response.ok) {
     const errorText = await response.text();
 
-    // Try to parse OpenRouter error for structured info
     let parsedError: Record<string, unknown> = {};
     try {
       parsedError = JSON.parse(errorText);
     } catch {
-      // not JSON, use raw text
+      // JSON değilse raw text kullanılır
     }
 
     const openRouterErr =
@@ -61,11 +80,9 @@ export async function generateTestCases(
       (openRouterErr?.metadata as Record<string, unknown>)
         ?.retry_after_seconds ?? null;
 
-    // Throw structured error with retry info
     const enhanced: Record<string, unknown> = {
       statusCode: response.status,
-      message:
-        (openRouterErr?.message as string) ?? errorText,
+      message: (openRouterErr?.message as string) ?? errorText,
       provider_name:
         (openRouterErr?.metadata as Record<string, unknown>)
           ?.provider_name ?? "unknown",
@@ -79,6 +96,7 @@ export async function generateTestCases(
     throw new Error(JSON.stringify(enhanced));
   }
 
+  // ── Başarılı Yanıt ──────────────────────────────────────────────
   const data: OpenRouterResponse = await response.json();
 
   if (data.error) {
@@ -90,6 +108,8 @@ export async function generateTestCases(
     throw new Error("No content in OpenRouter response");
   }
 
+  // AI'dan gelen JSON metnini parse et
+  // Bazen AI markdown code fence içinde dönebilir, onu temizleriz
   try {
     const clean = content
       .replace(/```json\n?/g, "")

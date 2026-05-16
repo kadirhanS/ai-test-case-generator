@@ -1,9 +1,17 @@
+// ─── Main Page: AI Test Case Generator ───────────────────────────
+// Projenin ana sayfası. Kullanıcıdan feature name ve description
+// alır, /api/generate endpoint'ine gönderir, gelen yanıtı
+// sessionStorage'a kaydeder ve /results sayfasına yönlendirir.
+// Hata yönetimi için yapılandırılmış API hatalarını işler ve
+// kullanıcı dostu mesajlar gösterir.
+
 "use client";
 
 import { useRouter } from "next/navigation";
 import { useState } from "react";
 import TestCaseForm from "@/components/TestCaseForm";
 
+// Backend'den dönen yapılandırılmış hata yanıtı tipi
 interface ApiError {
   message?: string;
   statusCode?: number;
@@ -17,6 +25,11 @@ export default function Home() {
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  /**
+   * Form gönderimi — TestCaseForm'dan gelen verilerle API'yi çağırır.
+   * Başarılı: sonuçları sessionStorage'a kaydeder, /results'a yönlendirir
+   * Başarısız: hata tipine göre kullanıcı dostu mesaj gösterir
+   */
   const handleGenerate = async (
     featureName: string,
     description: string,
@@ -34,38 +47,45 @@ export default function Home() {
 
       const data = await response.json();
 
+      // ── Hata durumları ──────────────────────────────────────
       if (!response.ok) {
-        // Structured error from our backend
         const apiErr = data as ApiError;
 
+        // 429: Rate limit — model çok yoğun
         if (apiErr.isRateLimit) {
-          const retryMsg =
-            apiErr.retryAfterSeconds
-              ? ` ${apiErr.retryAfterSeconds} saniye sonra tekrar deneyin.`
-              : "";
+          const retryMsg = apiErr.retryAfterSeconds
+            ? ` ${apiErr.retryAfterSeconds} seconds.`
+            : "";
           setError(
-            `⚠️ \u201C${apiErr.provider_name ?? "bilinmeyen sağlayıcı"}\u201D üzerinde bu model yoğunluktan reddedildi.${retryMsg} Lütfen model seçimini değiştirip tekrar deneyin (ör. Gemini 2.0 Flash daha stabildir).`
+            `⚠️ This model is temporarily rate-limited on "${apiErr.provider_name ?? "unknown provider"}".${retryMsg} Please switch to a more stable model (e.g. Gemini 2.0 Flash).`
           );
-        } else if (apiErr.statusCode === 401 || apiErr.statusCode === 403) {
-          setError("🔑 API Key geçersiz. Lütfen key'inizi kontrol edin.");
-        } else if (apiErr.statusCode === 402) {
+        }
+        // 401/403: Yetkisiz API key
+        else if (apiErr.statusCode === 401 || apiErr.statusCode === 403) {
+          setError("🔑 Invalid API Key. Please check your key.");
+        }
+        // 402: Bakiye yetersiz
+        else if (apiErr.statusCode === 402) {
           setError(
-            "💳 Hesabınızda yeterli bakiye yok. Free bir model seçin veya OpenRouter hesabınıza bakiye ekleyin."
+            "💳 Insufficient balance. Choose a free model or add credits to your OpenRouter account."
           );
-        } else {
-          setError(apiErr.message ?? "Bilinmeyen bir hata oluştu.");
+        }
+        // Diğer hatalar
+        else {
+          setError(apiErr.message ?? "An unknown error occurred.");
         }
         return;
       }
 
+      // ── Başarılı — sonuçları kaydet ve results sayfasına git ─
       sessionStorage.setItem("testResults", JSON.stringify(data));
       router.push("/results");
     } catch (err) {
-      // Network error / JSON parse error etc.
+      // Network hatası / JSON parse hatası
       setError(
         err instanceof Error
           ? err.message
-          : "Bağlantı hatası. Lütfen tekrar deneyin."
+          : "Connection error. Please try again."
       );
     } finally {
       setIsLoading(false);
@@ -74,6 +94,7 @@ export default function Home() {
 
   return (
     <div className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 py-8">
+      {/* ── Hero Section ───────────────────────────────────────── */}
       <div className="mb-10 text-center">
         <h1 className="text-3xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
           AI Test Case Generator
@@ -84,11 +105,12 @@ export default function Home() {
         </p>
       </div>
 
+      {/* ── Form ──────────────────────────────────────────────── */}
       <div className="rounded-xl border border-zinc-200 bg-white p-6 shadow-sm dark:border-zinc-800 dark:bg-zinc-900">
         <TestCaseForm onGenerate={handleGenerate} isLoading={isLoading} />
       </div>
 
-      {/* ── Error Display ── */}
+      {/* ── Error Banner ──────────────────────────────────────── */}
       {error && (
         <div className="mt-6 rounded-lg border border-red-200 bg-red-50 p-4 dark:border-red-900 dark:bg-red-900/20">
           <div className="flex items-start gap-3">
@@ -98,8 +120,7 @@ export default function Home() {
                 {error}
               </p>
               <p className="mt-1 text-xs text-red-600 dark:text-red-400">
-                Model değiştirip tekrar deneyebilir veya sayfayı yenileyip
-                farklı bir model seçebilirsiniz.
+                Try switching to a different model or try again later.
               </p>
             </div>
             <button
@@ -112,6 +133,7 @@ export default function Home() {
         </div>
       )}
 
+      {/* ── Info Cards ────────────────────────────────────────── */}
       <div className="mt-10 grid grid-cols-1 gap-4 sm:grid-cols-3">
         <div className="rounded-lg border border-zinc-200 bg-white p-4 dark:border-zinc-800 dark:bg-zinc-900">
           <h3 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">

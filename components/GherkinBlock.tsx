@@ -1,3 +1,10 @@
+// ─── GherkinBlock Component ──────────────────────────────────────
+// AI tarafından üretilen Gherkin senaryolarını Given/When/Then
+// formatında görüntüler. Her senaryo ayrı ayrı kopyalanabilir,
+// tüm senaryolar tek tuşla kopyalanabilir. Gherkin formatındaki
+// anahtar kelimeler renk kodludur: Scenario=indigo, Given=green,
+// When=blue, Then=red.
+
 "use client";
 
 import { useState } from "react";
@@ -14,12 +21,14 @@ export default function GherkinBlock({ scenarios }: GherkinBlockProps) {
     return null;
   }
 
+  // Tek senaryoyu panoya kopyala
   const copyToClipboard = async (text: string, index: number) => {
     await navigator.clipboard.writeText(text);
     setCopiedIndex(index);
     setTimeout(() => setCopiedIndex(null), 2000);
   };
 
+  // Tüm senaryoları panoya kopyala
   const copyAll = async () => {
     const all = scenarios
       .map(
@@ -32,6 +41,7 @@ export default function GherkinBlock({ scenarios }: GherkinBlockProps) {
 
   return (
     <div className="space-y-4">
+      {/* Başlık ve Copy All butonu */}
       <div className="flex items-center justify-between">
         <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
           Gherkin Scenarios
@@ -44,6 +54,7 @@ export default function GherkinBlock({ scenarios }: GherkinBlockProps) {
         </button>
       </div>
 
+      {/* Senayro listesi */}
       <div className="space-y-3">
         {scenarios.map((scenario, index) => {
           const text = `Scenario: ${scenario.scenario}\n  Given ${scenario.given}\n  When ${scenario.when}\n  Then ${scenario.then}`;
@@ -53,6 +64,7 @@ export default function GherkinBlock({ scenarios }: GherkinBlockProps) {
               key={index}
               className="relative rounded-lg border border-zinc-200 bg-zinc-50 p-4 font-mono text-xs dark:border-zinc-800 dark:bg-zinc-900/50"
             >
+              {/* Gherkin formatı — renk kodlamalı anahtar kelimeler */}
               <div className="space-y-1.5 text-zinc-800 dark:text-zinc-200">
                 <p>
                   <span className="font-bold text-indigo-600 dark:text-indigo-400">
@@ -80,6 +92,7 @@ export default function GherkinBlock({ scenarios }: GherkinBlockProps) {
                 </p>
               </div>
 
+              {/* Copy butonu (üst sağ) */}
               <button
                 onClick={() => copyToClipboard(text, index)}
                 className="absolute right-2 top-2 rounded-md bg-zinc-200/80 px-2 py-1 text-[10px] font-medium text-zinc-500 transition-colors hover:bg-zinc-300 dark:bg-zinc-800 dark:text-zinc-400 dark:hover:bg-zinc-700"

@@ -1,3 +1,19 @@
+// ─── AI Prompt Templates ─────────────────────────────────────────
+// Bu dosya, OpenRouter API'sine gönderilen system prompt'unu
+// oluşturur. Prompt, AI'a hangi formatta çıktı üreteceğini,
+// hangi kategorilerde test case'ler istediğimizi ve JSON
+// yapısının nasıl olması gerektiğini belirtir.
+
+/**
+ * AI system prompt'unu oluşturur.
+ * AI'a bir QA mühendisi rolü verir ve feature'a göre
+ * positive, negative, edge case ve Gherkin senaryoları üretmesini
+ * söyler. Çıktının her zaman geçerli JSON olması zorunludur.
+ *
+ * @param featureName - Test edilecek özelliğin adı
+ * @param description - Özelliğin detaylı açıklaması
+ * @returns System prompt metni
+ */
 export function buildPrompt(
   featureName: string,
   description: string

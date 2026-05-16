@@ -1,3 +1,8 @@
+// ─── Root Layout ─────────────────────────────────────────────────
+// Tüm sayfaların ortak HTML yapısını tanımlar.
+// Geist font ailesini yükler, dark mode desteği sağlar ve
+// içeriği maksimum 6xl genişlikte ortalar.
+
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import "./globals.css";

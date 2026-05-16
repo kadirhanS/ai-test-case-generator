@@ -1,3 +1,9 @@
+// ─── ExportButtons Component ─────────────────────────────────────
+// Kullanıcıya test case'lerini dışa aktarması için üç seçenek sunar:
+// 1. Copy All — tüm test senaryolarını panoya kopyala
+// 2. Export .feature — Gherkin senaryolarını .feature dosyası olarak indir
+// 3. Export .txt — Tüm test senaryolarını düz metin dosyası olarak indir
+
 "use client";
 
 import { useState } from "react";
@@ -10,12 +16,14 @@ interface ExportButtonsProps {
 export default function ExportButtons({ data }: ExportButtonsProps) {
   const [copied, setCopied] = useState(false);
 
+  // Tüm test case'lerini tek bir dizide topla
   const allTestCases = [
     ...data.positiveCases,
     ...data.negativeCases,
     ...data.edgeCases,
   ];
 
+  // ── Copy All: Panoya kopyala ────────────────────────────────
   const copyToClipboard = async () => {
     const text = allTestCases
       .map(
@@ -28,10 +36,11 @@ export default function ExportButtons({ data }: ExportButtonsProps) {
     setTimeout(() => setCopied(false), 2000);
   };
 
+  // ── Export .feature: Gherkin formatında dosya indir ──────────
   const exportFeatureFile = () => {
     const content = `Feature: ${data.featureName}\n\n${data.gherkinScenarios
       .map(
-        (s, i) =>
+        (s) =>
           `Scenario: ${s.scenario}\n  Given ${s.given}\n  When ${s.when}\n  Then ${s.then}`
       )
       .join("\n\n")}`;
@@ -45,6 +54,7 @@ export default function ExportButtons({ data }: ExportButtonsProps) {
     URL.revokeObjectURL(url);
   };
 
+  // ── Export .txt: Tüm testleri düz metin dosyasına yaz ────────
   const exportTxtFile = () => {
     const content = `Feature: ${data.featureName}
 Generated: ${new Date().toLocaleDateString()}

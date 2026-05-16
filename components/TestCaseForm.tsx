@@ -1,9 +1,16 @@
+// ─── TestCaseForm Component ──────────────────────────────────────
+// Ana form bileşeni. Kullanıcıdan API key, plan seçimi (free/paid),
+// model, feature name ve description alır. API key'i sessionStorage'da
+// saklayarak sayfa yenilemelerinde korur, sekme kapanınca silinir.
+// Model listesini seçilen plan'a göre /api/models'den çeker.
+
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
 import type { ModelInfo } from "@/lib/types";
 
 interface TestCaseFormProps {
+  /** Ana sayfadaki generate fonksiyonu — tüm form verilerini yukarı taşır */
   onGenerate: (
     featureName: string,
     description: string,
@@ -13,6 +20,7 @@ interface TestCaseFormProps {
   isLoading: boolean;
 }
 
+// sessionStorage key — API key bu anahtarla saklanır
 const SESSION_KEY = "tcApiKey";
 
 export default function TestCaseForm({
@@ -22,17 +30,17 @@ export default function TestCaseForm({
   const [featureName, setFeatureName] = useState("");
   const [description, setDescription] = useState("");
 
-  // API Key state
+  // ── API Key State ─────────────────────────────────────────────
   const [apiKey, setApiKey] = useState("");
   const [keySaved, setKeySaved] = useState(false);
 
-  // Plan & Model state
+  // ── Plan & Model State ────────────────────────────────────────
   const [plan, setPlan] = useState<"free" | "paid">("free");
   const [models, setModels] = useState<ModelInfo[]>([]);
   const [selectedModel, setSelectedModel] = useState("");
   const [modelsLoading, setModelsLoading] = useState(false);
 
-  // Load saved API Key from sessionStorage on mount
+  // Sayfa yüklendiğinde sessionStorage'dan API key'i geri yükle
   useEffect(() => {
     const saved = sessionStorage.getItem(SESSION_KEY);
     if (saved) {
@@ -41,7 +49,7 @@ export default function TestCaseForm({
     }
   }, []);
 
-  // Fetch models when plan changes
+  // Plan değişince /api/models'den yeni model listesini çek
   const fetchModels = useCallback(async (planType: "free" | "paid") => {
     setModelsLoading(true);
     try {
@@ -49,23 +57,24 @@ export default function TestCaseForm({
       const data = await res.json();
       if (data.models && Array.isArray(data.models)) {
         setModels(data.models);
-        // Auto-select first model
+        // İlk modeli otomatik seç (stabil modeller önde)
         if (data.models.length > 0) {
           setSelectedModel(data.models[0].id);
         }
       }
     } catch {
-      // Silently fail — models will be empty
+      // Hata sessizce yutulur — model listesi boş kalır
     } finally {
       setModelsLoading(false);
     }
   }, []);
 
-  // Fetch on mount and when plan changes
+  // İlk yükleme ve plan değişikliğinde model listesini tazele
   useEffect(() => {
     fetchModels(plan);
   }, [plan, fetchModels]);
 
+  // API Key değişikliği → sessionStorage'a kaydet
   const handleApiKeyChange = (value: string) => {
     setApiKey(value);
     if (value.trim()) {
@@ -77,6 +86,7 @@ export default function TestCaseForm({
     }
   };
 
+  // Form submit → tüm veriyi parent'a ilet
   const handleSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (
@@ -102,7 +112,7 @@ export default function TestCaseForm({
 
   return (
     <form onSubmit={handleSubmit} className="flex flex-col gap-6">
-      {/* ── API Key Section ── */}
+      {/* ── API Key ───────────────────────────────────────────── */}
       <div className="flex flex-col gap-2">
         <label
           htmlFor="api-key"
@@ -120,21 +130,21 @@ export default function TestCaseForm({
         />
         {keySaved && (
           <p className="text-xs text-emerald-600 dark:text-emerald-400">
-            ✓ Key kaydedildi — sayfa yenilense de kalır
+            ✓ Key saved — persists across page refreshes
           </p>
         )}
       </div>
 
-      {/* ── Security Warning ── */}
+      {/* ── Security Warning ──────────────────────────────────── */}
       <div className="rounded-lg border border-amber-200 bg-amber-50 p-3 dark:border-amber-800 dark:bg-amber-900/20">
         <p className="text-xs text-amber-700 dark:text-amber-300">
-          🔒 API Key&apos;iniz sadece bu oturumda geçerlidir.{" "}
-          <strong>Sekmeyi/tarayıcıyı kapatınca otomatik silinir.</strong>{" "}
-          Key&apos;iniz sunucuda saklanmaz, doğrudan OpenRouter&apos;a iletilir.
+          🔒 Your API key is session-only.{" "}
+          <strong>It is automatically deleted when you close the tab/browser.</strong>{" "}
+          Your key is never stored on the server — it is sent directly to OpenRouter.
         </p>
       </div>
 
-      {/* ── Plan Section ── */}
+      {/* ── Plan Selection ────────────────────────────────────── */}
       <div className="flex flex-col gap-2">
         <label className="text-sm font-medium text-zinc-700 dark:text-zinc-300">
           💰 Plan
@@ -165,7 +175,7 @@ export default function TestCaseForm({
         </div>
       </div>
 
-      {/* ── Model Section ── */}
+      {/* ── Model Select ──────────────────────────────────────── */}
       <div className="flex flex-col gap-2">
         <label
           htmlFor="model-select"
@@ -217,10 +227,10 @@ export default function TestCaseForm({
         )}
       </div>
 
-      {/* ── Divider ── */}
+      {/* ── Divider ───────────────────────────────────────────── */}
       <hr className="border-zinc-200 dark:border-zinc-800" />
 
-      {/* ── Feature Name Section ── */}
+      {/* ── Feature Name ───────────────────────────────────────── */}
       <div className="flex flex-col gap-2">
         <label
           htmlFor="feature-name"
@@ -238,7 +248,7 @@ export default function TestCaseForm({
         />
       </div>
 
-      {/* ── Description Section ── */}
+      {/* ── Description ────────────────────────────────────────── */}
       <div className="flex flex-col gap-2">
         <label
           htmlFor="description"
@@ -256,7 +266,7 @@ export default function TestCaseForm({
         />
       </div>
 
-      {/* ── Submit ── */}
+      {/* ── Submit Button ──────────────────────────────────────── */}
       <button
         type="submit"
         disabled={isLoading || !isFormValid}

@@ -1,3 +1,10 @@
+// ─── Results Page ────────────────────────────────────────────────
+// AI'dan gelen test case'lerini kategorilere ayrılmış şekilde
+// görüntüler. Positive, Negative ve Edge case'ler ayrı bölümlerde
+// sunulur. Gherkin senaryoları ayrı bir blokta Given/When/Then
+// formatında gösterilir. Export butonları ile kopyalama ve
+// dosya indirme imkanı sağlar.
+
 "use client";
 
 import { useEffect, useState } from "react";
@@ -13,22 +20,24 @@ export default function ResultsPage() {
   const [data, setData] = useState<GenerateResponse | null>(null);
   const [loaded, setLoaded] = useState(false);
 
+  // Sayfa yüklendiğinde sessionStorage'dan test sonuçlarını al
   useEffect(() => {
     const stored = sessionStorage.getItem("testResults");
     if (stored) {
       try {
         setData(JSON.parse(stored));
       } catch {
-        router.push("/");
+        router.push("/"); // Geçersiz veri → ana sayfaya yönlendir
         return;
       }
     } else {
-      router.push("/");
+      router.push("/"); // Veri yok → ana sayfaya yönlendir
       return;
     }
     setLoaded(true);
   }, [router]);
 
+  // Yükleme ekranı
   if (!loaded || !data) {
     return (
       <div className="flex flex-1 items-center justify-center">
@@ -45,6 +54,7 @@ export default function ResultsPage() {
 
   return (
     <div className="mx-auto flex w-full max-w-4xl flex-1 flex-col px-4 py-8">
+      {/* ── Header: feature adı, istatistik, aksiyon butonları ── */}
       <div className="mb-6 flex flex-wrap items-center justify-between gap-4">
         <div>
           <h1 className="text-2xl font-bold tracking-tight text-zinc-900 dark:text-zinc-50">
@@ -52,8 +62,7 @@ export default function ResultsPage() {
           </h1>
           <p className="mt-1 text-sm text-zinc-500 dark:text-zinc-400">
             {allCases.length} test case{allCases.length !== 1 ? "s" : ""}{" "}
-            generated ·{" "}
-            {data.gherkinScenarios.length} Gherkin scenario
+            generated · {data.gherkinScenarios.length} Gherkin scenario
             {data.gherkinScenarios.length !== 1 ? "s" : ""}
           </p>
         </div>
@@ -68,7 +77,7 @@ export default function ResultsPage() {
         </div>
       </div>
 
-      {/* Positive Cases */}
+      {/* ── Positive Cases (green theme) ─────────────────────── */}
       {data.positiveCases.length > 0 && (
         <section className="mb-8">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-emerald-600 dark:text-emerald-400">
@@ -82,7 +91,7 @@ export default function ResultsPage() {
         </section>
       )}
 
-      {/* Negative Cases */}
+      {/* ── Negative Cases (red theme) ───────────────────────── */}
       {data.negativeCases.length > 0 && (
         <section className="mb-8">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-red-600 dark:text-red-400">
@@ -96,7 +105,7 @@ export default function ResultsPage() {
         </section>
       )}
 
-      {/* Edge Cases */}
+      {/* ── Edge Cases (amber theme) ─────────────────────────── */}
       {data.edgeCases.length > 0 && (
         <section className="mb-8">
           <h2 className="mb-3 text-sm font-semibold uppercase tracking-wider text-amber-600 dark:text-amber-400">
@@ -110,7 +119,7 @@ export default function ResultsPage() {
         </section>
       )}
 
-      {/* Gherkin Scenarios */}
+      {/* ── Gherkin Scenarios ────────────────────────────────── */}
       {data.gherkinScenarios.length > 0 && (
         <section className="mb-8">
           <GherkinBlock scenarios={data.gherkinScenarios} />

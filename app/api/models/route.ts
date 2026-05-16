@@ -1,8 +1,15 @@
+// ─── API Route: /api/models ──────────────────────────────────────
+// OpenRouter'ın model listesini çeker ve frontend'in ihtiyacına
+// göre filtreler (free veya paid). Stabil modeller (örn. Gemini)
+// dropdown'da üst sıralarda gösterilir, böylece kullanıcı ilk
+// bakışta en güvenilir modeli seçebilir.
+
 import type { ModelInfo } from "@/lib/types";
 
 const OPENROUTER_MODELS_URL = "https://openrouter.ai/api/v1/models";
 
-// Most stable free models — shown first in the dropdown
+// Stabil free modeller — dropdown'da en üstte görünürler
+// Rate limit yeme olasılığı düşük, herkese açık modeller
 const PRIORITY_FREE_MODELS = [
   "google/gemini-2.0-flash-exp:free",
   "google/gemini-2.5-flash-preview-04-17:free",
@@ -12,9 +19,11 @@ const PRIORITY_FREE_MODELS = [
 
 export async function GET(request: Request) {
   try {
+    // URL'den ?plan=free veya ?plan=paid parametresini al
     const { searchParams } = new URL(request.url);
     const plan = searchParams.get("plan") ?? "free";
 
+    // OpenRouter'dan tüm modelleri çek
     const response = await fetch(OPENROUTER_MODELS_URL);
 
     if (!response.ok) {
@@ -30,8 +39,11 @@ export async function GET(request: Request) {
       return Response.json({ models: [] });
     }
 
+    // Modelleri filtrele, sırala ve frontend'e gönder
     const models: ModelInfo[] = data.data
       .filter((m: any) => {
+        // Free model: prompt ve completion ücreti 0 olanlar
+        // Paid model: en az birinin ücreti 0'dan büyük
         const pricing = m.pricing ?? {};
         const promptPrice = parseFloat(pricing.prompt ?? "0");
         const completionPrice = parseFloat(pricing.completion ?? "0");
@@ -46,7 +58,7 @@ export async function GET(request: Request) {
         name: m.name ?? m.id,
       }))
       .sort((a: ModelInfo, b: ModelInfo) => {
-        // Priority stable models first
+        // Stabil modeller önce, sonra alfabetik sıra
         const aPriority =
           plan === "free" ? PRIORITY_FREE_MODELS.indexOf(a.id) : -1;
         const bPriority =
