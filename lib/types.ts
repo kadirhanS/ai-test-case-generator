@@ -42,6 +42,14 @@ export interface ModelInfo {
   name: string; // Model adı (örn. "Google Gemini 2.0 Flash")
 }
 
+// ─── HistoryItem: localStorage'da saklanan geçmiş kaydı ─────────
+export interface HistoryItem {
+  id: string;
+  featureName: string;
+  timestamp: number;
+  result: GenerateResponse;
+}
+
 // ─── OpenRouter API Request/Response Types ──────────────────────
 // OpenRouter'ın chat.completions endpoint'ine gönderilen
 // istek ve gelen yanıt için tip tanımları.

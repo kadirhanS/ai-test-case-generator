@@ -4,12 +4,14 @@
 // sessionStorage'a kaydeder ve /results sayfasına yönlendirir.
 // Hata yönetimi için yapılandırılmış API hatalarını işler ve
 // kullanıcı dostu mesajlar gösterir.
+// Alt kısımda localStorage'daki son 10 test sonucu listelenir.
 
 "use client";
 
 import { useRouter } from "next/navigation";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import TestCaseForm from "@/components/TestCaseForm";
+import type { HistoryItem } from "@/lib/types";
 
 // Backend'den dönen yapılandırılmış hata yanıtı tipi
 interface ApiError {
@@ -20,10 +22,25 @@ interface ApiError {
   provider_name?: string;
 }
 
+const HISTORY_KEY = "testHistory";
+
 export default function Home() {
   const router = useRouter();
   const [isLoading, setIsLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [history, setHistory] = useState<HistoryItem[]>([]);
+
+  // Sayfa yüklendiğinde localStorage'dan geçmişi oku
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem(HISTORY_KEY);
+      if (raw) {
+        setHistory(JSON.parse(raw));
+      }
+    } catch {
+      // Geçersiz veri varsa sessizce geç
+    }
+  }, []);
 
   /**
    * Form gönderimi — TestCaseForm'dan gelen verilerle API'yi çağırır.
@@ -90,6 +107,26 @@ export default function Home() {
     } finally {
       setIsLoading(false);
     }
+  };
+
+  // Geçmişteki bir öğeye tıklayınca results'a git
+  const openHistoryItem = (item: HistoryItem) => {
+    sessionStorage.setItem("testResults", JSON.stringify(item.result));
+    router.push("/results");
+  };
+
+  // Geçmişi temizle
+  const clearHistory = () => {
+    localStorage.removeItem(HISTORY_KEY);
+    setHistory([]);
+  };
+
+  // Geçmiş öğesini sil
+  const deleteHistoryItem = (id: string, e: React.MouseEvent) => {
+    e.stopPropagation();
+    const updated = history.filter((h) => h.id !== id);
+    setHistory(updated);
+    localStorage.setItem(HISTORY_KEY, JSON.stringify(updated));
   };
 
   return (
@@ -162,6 +199,48 @@ export default function Home() {
           </p>
         </div>
       </div>
+
+      {/* ── History Section ───────────────────────────────────── */}
+      {history.length > 0 && (
+        <div className="mt-10">
+          <div className="mb-3 flex items-center justify-between">
+            <h2 className="text-sm font-semibold text-zinc-900 dark:text-zinc-100">
+              📁 Recent Analyses ({history.length})
+            </h2>
+            <button
+              onClick={clearHistory}
+              className="text-xs text-zinc-500 hover:text-red-600 dark:text-zinc-400 dark:hover:text-red-400"
+            >
+              Clear All
+            </button>
+          </div>
+          <div className="space-y-2">
+            {history.map((item) => (
+              <button
+                key={item.id}
+                onClick={() => openHistoryItem(item)}
+                className="flex w-full items-center justify-between rounded-lg border border-zinc-200 bg-white p-3 text-left transition-colors hover:border-zinc-300 hover:bg-zinc-50 dark:border-zinc-800 dark:bg-zinc-900 dark:hover:border-zinc-700 dark:hover:bg-zinc-800"
+              >
+                <div className="flex-1">
+                  <p className="text-sm font-medium text-zinc-800 dark:text-zinc-200">
+                    {item.featureName}
+                  </p>
+                  <p className="text-xs text-zinc-500 dark:text-zinc-400">
+                    {new Date(item.timestamp).toLocaleString()}
+                  </p>
+                </div>
+                <button
+                  onClick={(e) => deleteHistoryItem(item.id, e)}
+                  className="ml-2 rounded p-1 text-xs text-zinc-400 hover:bg-red-50 hover:text-red-500 dark:hover:bg-red-900/30 dark:hover:text-red-400"
+                  title="Delete"
+                >
+                  ✕
+                </button>
+              </button>
+            ))}
+          </div>
+        </div>
+      )}
     </div>
   );
 }

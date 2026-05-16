@@ -3,6 +3,8 @@
 // model, feature name ve description alır. API key'i sessionStorage'da
 // saklayarak sayfa yenilemelerinde korur, sekme kapanınca silinir.
 // Model listesini seçilen plan'a göre /api/models'den çeker.
+// API key doğrulama butonu ile kullanıcı key'in geçerliliğini
+// generate'a basmadan test edebilir.
 
 "use client";
 
@@ -33,6 +35,10 @@ export default function TestCaseForm({
   // ── API Key State ─────────────────────────────────────────────
   const [apiKey, setApiKey] = useState("");
   const [keySaved, setKeySaved] = useState(false);
+  const [keyStatus, setKeyStatus] = useState<
+    null | "loading" | "valid" | "invalid"
+  >(null);
+  const [keyMessage, setKeyMessage] = useState("");
 
   // ── Plan & Model State ────────────────────────────────────────
   const [plan, setPlan] = useState<"free" | "paid">("free");
@@ -77,12 +83,41 @@ export default function TestCaseForm({
   // API Key değişikliği → sessionStorage'a kaydet
   const handleApiKeyChange = (value: string) => {
     setApiKey(value);
+    setKeyStatus(null); // key değişince doğrulama sıfırlansın
+    setKeyMessage("");
     if (value.trim()) {
       sessionStorage.setItem(SESSION_KEY, value.trim());
       setKeySaved(true);
     } else {
       sessionStorage.removeItem(SESSION_KEY);
       setKeySaved(false);
+    }
+  };
+
+  // ── API Key Doğrulama ─────────────────────────────────────────
+  // "Validate" butonuna basınca /api/validate-key'e istek atar.
+  // Geçerliyse yeşil tik, geçersizse kırmızı uyarı gösterir.
+  const validateKey = async () => {
+    if (!apiKey.trim()) return;
+    setKeyStatus("loading");
+    setKeyMessage("");
+    try {
+      const res = await fetch("/api/validate-key", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ apiKey: apiKey.trim() }),
+      });
+      const data = await res.json();
+      if (data.valid) {
+        setKeyStatus("valid");
+        setKeyMessage(data.warning ?? "Key is valid ✓");
+      } else {
+        setKeyStatus("invalid");
+        setKeyMessage(data.message ?? "Invalid API Key");
+      }
+    } catch {
+      setKeyStatus("invalid");
+      setKeyMessage("Connection error. Check your network.");
     }
   };
 
@@ -120,17 +155,62 @@ export default function TestCaseForm({
         >
           🔑 OpenRouter API Key
         </label>
-        <input
-          id="api-key"
-          type="password"
-          value={apiKey}
-          onChange={(e) => handleApiKeyChange(e.target.value)}
-          placeholder="sk-or-..."
-          className="w-full rounded-lg border border-zinc-300 bg-white px-4 py-3 font-mono text-sm text-zinc-900 placeholder-zinc-400 transition-colors focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500 dark:focus:ring-zinc-800"
-        />
-        {keySaved && (
+        <div className="flex gap-2">
+          <input
+            id="api-key"
+            type="password"
+            value={apiKey}
+            onChange={(e) => handleApiKeyChange(e.target.value)}
+            placeholder="sk-or-..."
+            className="flex-1 rounded-lg border border-zinc-300 bg-white px-4 py-3 font-mono text-sm text-zinc-900 placeholder-zinc-400 transition-colors focus:border-zinc-500 focus:outline-none focus:ring-2 focus:ring-zinc-200 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-100 dark:placeholder-zinc-500 dark:focus:ring-zinc-800"
+          />
+          <button
+            type="button"
+            onClick={validateKey}
+            disabled={!apiKey.trim() || keyStatus === "loading"}
+            className="rounded-lg border border-zinc-300 bg-white px-4 py-3 text-sm font-medium text-zinc-700 transition-colors hover:bg-zinc-50 disabled:cursor-not-allowed disabled:opacity-50 dark:border-zinc-700 dark:bg-zinc-900 dark:text-zinc-300 dark:hover:bg-zinc-800"
+          >
+            {keyStatus === "loading" ? (
+              <span className="flex items-center gap-1.5">
+                <svg
+                  className="h-4 w-4 animate-spin"
+                  viewBox="0 0 24 24"
+                  fill="none"
+                >
+                  <circle
+                    className="opacity-25"
+                    cx="12"
+                    cy="12"
+                    r="10"
+                    stroke="currentColor"
+                    strokeWidth="4"
+                  />
+                  <path
+                    className="opacity-75"
+                    fill="currentColor"
+                    d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4z"
+                  />
+                </svg>
+                Validating...
+              </span>
+            ) : (
+              "Validate"
+            )}
+          </button>
+        </div>
+        {keyStatus === "valid" && (
           <p className="text-xs text-emerald-600 dark:text-emerald-400">
-            ✓ Key saved — persists across page refreshes
+            ✓ {keyMessage}
+          </p>
+        )}
+        {keyStatus === "invalid" && (
+          <p className="text-xs text-red-600 dark:text-red-400">
+            ✗ {keyMessage}
+          </p>
+        )}
+        {keySaved && keyStatus === null && (
+          <p className="text-xs text-zinc-500 dark:text-zinc-400">
+            Key saved — click Validate to check it
           </p>
         )}
       </div>
