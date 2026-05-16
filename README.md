@@ -34,6 +34,10 @@ AI instantly generates:
 2. Sign up / Sign in
 3. Create a new API key (free models available — no credit card required)
 
+> 📄 **No `.env.local` needed!** This project doesn't use environment variables.
+> Your API key is entered directly in the browser UI and sent securely to OpenRouter.
+> A `.env.example` file is included for reference only — you don't need to create or modify any file.
+
 ### 2. Run the App
 
 ```bash
